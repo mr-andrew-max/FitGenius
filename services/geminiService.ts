@@ -15,6 +15,7 @@ export const generateWorkoutPlan = async (profile: UserProfile): Promise<Workout
     Injuries/Constraints: ${profile.injuries || "None"}.
 
     Return a valid JSON object with a summary and a daily schedule.
+    Include a short description for each exercise explaining how to perform it.
   `;
 
   const response = await ai.models.generateContent({
@@ -43,7 +44,8 @@ export const generateWorkoutPlan = async (profile: UserProfile): Promise<Workout
                       name: { type: Type.STRING },
                       sets: { type: Type.NUMBER },
                       reps: { type: Type.STRING, description: "Rep range (e.g., '8-12' or 'Failure')" },
-                      notes: { type: Type.STRING, description: "Form cue or tempo instruction" }
+                      notes: { type: Type.STRING, description: "Form cue or tempo instruction" },
+                      description: { type: Type.STRING, description: "Short step-by-step guide on how to perform the exercise." }
                     }
                   }
                 }

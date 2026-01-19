@@ -3,14 +3,16 @@ import Onboarding from './components/Onboarding';
 import WorkoutPlanView from './components/WorkoutPlan';
 import NutritionPlanView from './components/NutritionPlan';
 import ChatCoach from './components/ChatCoach';
+import ProgressView from './components/ProgressView';
 import { UserProfile, WorkoutPlan, NutritionPlan } from './types';
 import { generateWorkoutPlan, generateNutritionPlan } from './services/geminiService';
-import { Dumbbell, Utensils, MessageSquare, Loader2, RefreshCw } from 'lucide-react';
+import { Dumbbell, Utensils, MessageSquare, Loader2, RefreshCw, BarChart3 } from 'lucide-react';
 
 enum Tab {
   WORKOUT = 'workout',
   NUTRITION = 'nutrition',
-  COACH = 'coach'
+  COACH = 'coach',
+  PROGRESS = 'progress'
 }
 
 type LoadStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -50,6 +52,8 @@ const App: React.FC = () => {
 
   const fetchWorkout = async (userProfile: UserProfile) => {
     setWorkoutStatus('loading');
+    // Clear previous progress when generating a new plan
+    localStorage.removeItem('fitgenius_workout_progress');
     try {
       const plan = await generateWorkoutPlan(userProfile);
       setWorkoutPlan(plan);
@@ -125,6 +129,16 @@ const App: React.FC = () => {
                         {nutritionStatus === 'loading' && <Loader2 size={12} className="animate-spin text-emerald-500" />}
                     </button>
                     <button
+                        onClick={() => setActiveTab(Tab.PROGRESS)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                            activeTab === Tab.PROGRESS
+                            ? 'bg-zinc-800 text-white shadow-sm' 
+                            : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'
+                        }`}
+                    >
+                        <BarChart3 size={16} /> <span className="hidden sm:inline">Progress</span>
+                    </button>
+                    <button
                         onClick={() => setActiveTab(Tab.COACH)}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                             activeTab === Tab.COACH 
@@ -154,6 +168,10 @@ const App: React.FC = () => {
                     {nutritionStatus === 'error' && <ErrorView message="Failed to generate nutrition plan." onRetry={() => fetchNutrition(profile)} />}
                     {nutritionStatus === 'success' && nutritionPlan && <NutritionPlanView plan={nutritionPlan} />}
                 </>
+            )}
+
+            {activeTab === Tab.PROGRESS && (
+                <ProgressView workoutPlan={workoutPlan} />
             )}
 
             {activeTab === Tab.COACH && profile && (

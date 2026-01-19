@@ -35,6 +35,7 @@ export interface Exercise {
   sets: number;
   reps: string;
   notes: string;
+  description?: string;
 }
 
 export interface WorkoutDay {
