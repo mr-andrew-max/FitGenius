@@ -16,7 +16,7 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, isCompleted, onTo
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className={`border rounded-xl p-4 transition-all group ${
+    <div className={`border rounded-xl p-4 transition-all duration-300 group ${
         isCompleted 
         ? 'bg-emerald-950/20 border-emerald-900/50' 
         : 'bg-zinc-950 border-zinc-800 hover:border-zinc-700'
@@ -24,10 +24,10 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, isCompleted, onTo
       <div className="flex gap-4 items-start mb-2">
         <button 
             onClick={onToggle}
-            className={`mt-1 transition-colors shrink-0 ${
+            className={`mt-1 transition-all duration-300 shrink-0 transform ${
                 isCompleted 
-                ? 'text-emerald-500 hover:text-emerald-400' 
-                : 'text-zinc-600 hover:text-emerald-500'
+                ? 'text-emerald-500 hover:text-emerald-400 scale-110' 
+                : 'text-zinc-600 hover:text-emerald-500 hover:scale-105'
             }`}
         >
             {isCompleted ? <CheckCircle className="fill-emerald-500/20" size={24} /> : <Circle size={24} />}
@@ -35,20 +35,20 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, isCompleted, onTo
 
         <div className="flex-1">
             <div className="flex justify-between items-start">
-                <h4 className={`font-bold text-lg transition-colors ${
+                <h4 className={`font-bold text-lg transition-all duration-300 ${
                     isCompleted ? 'text-zinc-500 line-through decoration-zinc-700' : 'text-white group-hover:text-emerald-400'
                 }`}>
                 {exercise.name}
                 </h4>
                 <div className="flex gap-2 shrink-0">
-                    <span className={`text-xs px-2 py-1 rounded border whitespace-nowrap ${
+                    <span className={`text-xs px-2 py-1 rounded border whitespace-nowrap transition-colors duration-300 ${
                         isCompleted 
                         ? 'bg-emerald-900/20 text-emerald-700 border-emerald-900/30' 
                         : 'bg-zinc-900 text-zinc-300 border-zinc-800'
                     }`}>
                         {exercise.sets} Sets
                     </span>
-                    <span className={`text-xs px-2 py-1 rounded border whitespace-nowrap ${
+                    <span className={`text-xs px-2 py-1 rounded border whitespace-nowrap transition-colors duration-300 ${
                         isCompleted 
                         ? 'bg-emerald-900/20 text-emerald-700 border-emerald-900/30' 
                         : 'bg-zinc-900 text-zinc-300 border-zinc-800'
@@ -102,7 +102,6 @@ const WorkoutPlanView: React.FC<Props> = ({ plan }) => {
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   
   // State to track completed exercises/days. 
-  // Key format: "d{dayIndex}-e{exerciseIndex}" for exercises, "d{dayIndex}" for full day override/rest days
   const [progress, setProgress] = useState<Record<string, boolean>>(() => {
     if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('fitgenius_workout_progress');
@@ -155,6 +154,13 @@ const WorkoutPlanView: React.FC<Props> = ({ plan }) => {
       return day.exercises.every((_, idx) => progress[`d${dayIdx}-e${idx}`]);
   };
 
+  // Calculate progress for active day
+  const totalExercises = activeDay.exercises.length;
+  const completedCount = activeDay.exercises.filter((_, i) => isExerciseComplete(selectedDayIndex, i)).length;
+  const progressPercentage = totalExercises === 0 
+      ? (isDayComplete(selectedDayIndex) ? 100 : 0)
+      : Math.round((completedCount / totalExercises) * 100);
+
   return (
     <div className="animate-in fade-in zoom-in duration-300">
       <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl mb-6">
@@ -164,16 +170,16 @@ const WorkoutPlanView: React.FC<Props> = ({ plan }) => {
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Sidebar Days */}
-        <div className="lg:w-1/3 flex lg:flex-col gap-2 overflow-x-auto pb-4 lg:pb-0">
+        <div className="lg:w-1/3 flex lg:flex-col gap-2 overflow-x-auto pb-4 lg:pb-0 scrollbar-thin">
           {plan.schedule.map((day, index) => {
             const completed = isDayComplete(index);
             return (
                 <button
                 key={index}
                 onClick={() => setSelectedDayIndex(index)}
-                className={`p-4 rounded-xl text-left border transition-all min-w-[140px] lg:min-w-0 relative overflow-hidden ${
+                className={`p-4 rounded-xl text-left border transition-all min-w-[140px] lg:min-w-0 relative overflow-hidden group ${
                     selectedDayIndex === index
-                    ? 'bg-emerald-500/10 border-emerald-500/50 text-white'
+                    ? 'bg-emerald-500/10 border-emerald-500/50 text-white shadow-md shadow-emerald-900/20'
                     : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:bg-zinc-800'
                 }`}
                 >
@@ -181,13 +187,17 @@ const WorkoutPlanView: React.FC<Props> = ({ plan }) => {
                     <div>
                         <div className="font-semibold text-lg flex items-center gap-2">
                             {day.day}
-                            {completed && <CheckCircle size={16} className="text-emerald-500" />}
+                            {completed && <CheckCircle size={16} className="text-emerald-500 animate-in zoom-in" />}
                         </div>
                         <div className="text-xs uppercase tracking-wider opacity-70 truncate">{day.focus}</div>
                     </div>
                 </div>
+                {/* Progress bar on card */}
+                {selectedDayIndex !== index && !completed && (
+                   <div className="absolute bottom-0 left-0 h-1 bg-emerald-500/50 transition-all" style={{width: isDayComplete(index) ? '100%' : '0%'}}></div>
+                )}
                 {completed && (
-                    <div className="absolute top-0 right-0 p-2 opacity-10">
+                    <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
                         <Trophy size={48} />
                     </div>
                 )}
@@ -198,31 +208,41 @@ const WorkoutPlanView: React.FC<Props> = ({ plan }) => {
 
         {/* Active Day Detail */}
         <div className="lg:w-2/3 bg-zinc-900 border border-zinc-800 rounded-2xl p-6 min-h-[500px]">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6 border-b border-zinc-800 pb-4 gap-4">
-            <div>
-              <h3 className="text-2xl font-bold text-white mb-1 flex items-center gap-2">
-                  {activeDay.day}
-                  {isDayComplete(selectedDayIndex) && <span className="text-sm bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-full border border-emerald-500/30">Completed</span>}
-              </h3>
-              <p className="text-emerald-400 font-medium">{activeDay.focus}</p>
+          <div className="flex flex-col mb-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-4">
+                <div>
+                <h3 className="text-2xl font-bold text-white mb-1 flex items-center gap-2">
+                    {activeDay.day}
+                    {progressPercentage === 100 && <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-full border border-emerald-500/30 animate-in fade-in">Completed</span>}
+                </h3>
+                <p className="text-emerald-400 font-medium">{activeDay.focus}</p>
+                </div>
+                <div className="flex gap-2">
+                    {activeDay.durationMinutes > 0 && (
+                        <div className="flex items-center gap-2 text-zinc-400 bg-zinc-950 px-3 py-2 rounded-lg text-sm border border-zinc-800 h-10">
+                            <Clock size={16} />
+                            <span>{activeDay.durationMinutes} min</span>
+                        </div>
+                    )}
+                    <button
+                        onClick={() => toggleDayComplete(selectedDayIndex)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all border h-10 ${
+                            isDayComplete(selectedDayIndex)
+                            ? 'bg-emerald-600 border-emerald-500 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-900/40'
+                            : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white'
+                        }`}
+                    >
+                        {isDayComplete(selectedDayIndex) ? 'Completed' : 'Mark Day Complete'}
+                    </button>
+                </div>
             </div>
-            <div className="flex gap-2">
-                {activeDay.durationMinutes > 0 && (
-                    <div className="flex items-center gap-2 text-zinc-400 bg-zinc-950 px-3 py-2 rounded-lg text-sm border border-zinc-800 h-10">
-                        <Clock size={16} />
-                        <span>{activeDay.durationMinutes} min</span>
-                    </div>
-                )}
-                <button
-                    onClick={() => toggleDayComplete(selectedDayIndex)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors border h-10 ${
-                        isDayComplete(selectedDayIndex)
-                        ? 'bg-emerald-600 border-emerald-500 text-white hover:bg-emerald-500'
-                        : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white'
-                    }`}
-                >
-                    {isDayComplete(selectedDayIndex) ? 'Completed' : 'Mark Day Complete'}
-                </button>
+            
+            {/* Daily Progress Bar */}
+             <div className="w-full h-1.5 bg-zinc-950 rounded-full overflow-hidden border border-zinc-800/50">
+                <div 
+                    className="h-full bg-emerald-500 transition-all duration-500 ease-out shadow-[0_0_10px_rgba(16,185,129,0.5)]" 
+                    style={{ width: `${progressPercentage}%` }}
+                />
             </div>
           </div>
 

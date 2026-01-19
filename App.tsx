@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Onboarding from './components/Onboarding';
 import WorkoutPlanView from './components/WorkoutPlan';
 import NutritionPlanView from './components/NutritionPlan';
@@ -6,7 +6,7 @@ import ChatCoach from './components/ChatCoach';
 import ProgressView from './components/ProgressView';
 import { UserProfile, WorkoutPlan, NutritionPlan } from './types';
 import { generateWorkoutPlan, generateNutritionPlan } from './services/geminiService';
-import { Dumbbell, Utensils, MessageSquare, Loader2, RefreshCw, BarChart3 } from 'lucide-react';
+import { Dumbbell, Utensils, MessageSquare, Loader2, RefreshCw, BarChart3, Trash2 } from 'lucide-react';
 
 enum Tab {
   WORKOUT = 'workout',
@@ -40,20 +40,52 @@ const ErrorView: React.FC<{ message: string; onRetry: () => void }> = ({ message
 );
 
 const App: React.FC = () => {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  
-  const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
-  const [workoutStatus, setWorkoutStatus] = useState<LoadStatus>('idle');
-  
-  const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
-  const [nutritionStatus, setNutritionStatus] = useState<LoadStatus>('idle');
+  // --- Persistence Wrappers ---
+  const loadState = <T,>(key: string, fallback: T): T => {
+    if (typeof window === 'undefined') return fallback;
+    try {
+      const saved = localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : fallback;
+    } catch (e) {
+      console.error(`Failed to load ${key}`, e);
+      return fallback;
+    }
+  };
 
-  const [activeTab, setActiveTab] = useState<Tab>(Tab.WORKOUT);
+  // --- State ---
+  const [profile, setProfile] = useState<UserProfile | null>(() => loadState('fitgenius_profile', null));
+  
+  const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(() => loadState('fitgenius_workout_plan', null));
+  const [workoutStatus, setWorkoutStatus] = useState<LoadStatus>(() => workoutPlan ? 'success' : 'idle');
+  
+  const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(() => loadState('fitgenius_nutrition_plan', null));
+  const [nutritionStatus, setNutritionStatus] = useState<LoadStatus>(() => nutritionPlan ? 'success' : 'idle');
+
+  const [activeTab, setActiveTab] = useState<Tab>(() => loadState('fitgenius_active_tab', Tab.WORKOUT));
+
+  // --- Effects for Persistence ---
+  useEffect(() => {
+    if (profile) localStorage.setItem('fitgenius_profile', JSON.stringify(profile));
+  }, [profile]);
+
+  useEffect(() => {
+    if (workoutPlan) localStorage.setItem('fitgenius_workout_plan', JSON.stringify(workoutPlan));
+  }, [workoutPlan]);
+
+  useEffect(() => {
+    if (nutritionPlan) localStorage.setItem('fitgenius_nutrition_plan', JSON.stringify(nutritionPlan));
+  }, [nutritionPlan]);
+
+  useEffect(() => {
+    localStorage.setItem('fitgenius_active_tab', activeTab);
+  }, [activeTab]);
+
+  // --- Handlers ---
 
   const fetchWorkout = async (userProfile: UserProfile) => {
     setWorkoutStatus('loading');
-    // Clear previous progress when generating a new plan
-    localStorage.removeItem('fitgenius_workout_progress');
+    // We do NOT clear progress here automatically anymore to allow regeneration without data loss,
+    // unless the user explicitly resets from settings (feature for later).
     try {
       const plan = await generateWorkoutPlan(userProfile);
       setWorkoutPlan(plan);
@@ -78,10 +110,19 @@ const App: React.FC = () => {
 
   const handleOnboardingComplete = (userProfile: UserProfile) => {
     setProfile(userProfile);
-    // Non-blocking trigger of data generation
+    // Trigger generation
     fetchWorkout(userProfile);
     fetchNutrition(userProfile);
   };
+
+  const handleResetApp = () => {
+      if (confirm("Are you sure you want to reset everything? This will delete your profile and plans.")) {
+          localStorage.clear();
+          window.location.reload();
+      }
+  };
+
+  // --- Render ---
 
   if (!profile) {
     return (
@@ -97,13 +138,13 @@ const App: React.FC = () => {
         <header className="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-gradient-to-tr from-emerald-500 to-cyan-500 rounded-lg flex items-center justify-center">
+                    <div className="w-8 h-8 bg-gradient-to-tr from-emerald-500 to-cyan-500 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
                         <Dumbbell className="text-black" size={18} />
                     </div>
-                    <span className="font-bold text-xl tracking-tight">FitGenius AI</span>
+                    <span className="font-bold text-xl tracking-tight hidden sm:inline">FitGenius AI</span>
                 </div>
                 
-                <div className="flex gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800 overflow-x-auto">
+                <div className="flex gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800 overflow-x-auto no-scrollbar">
                     <button
                         onClick={() => setActiveTab(Tab.WORKOUT)}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
@@ -113,7 +154,7 @@ const App: React.FC = () => {
                         }`}
                     >
                         <Dumbbell size={16} /> 
-                        <span className="hidden sm:inline">Workout</span>
+                        <span className="hidden md:inline">Workout</span>
                         {workoutStatus === 'loading' && <Loader2 size={12} className="animate-spin text-emerald-500" />}
                     </button>
                     <button
@@ -125,7 +166,7 @@ const App: React.FC = () => {
                         }`}
                     >
                         <Utensils size={16} /> 
-                        <span className="hidden sm:inline">Nutrition</span>
+                        <span className="hidden md:inline">Nutrition</span>
                         {nutritionStatus === 'loading' && <Loader2 size={12} className="animate-spin text-emerald-500" />}
                     </button>
                     <button
@@ -136,7 +177,7 @@ const App: React.FC = () => {
                             : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'
                         }`}
                     >
-                        <BarChart3 size={16} /> <span className="hidden sm:inline">Progress</span>
+                        <BarChart3 size={16} /> <span className="hidden md:inline">Progress</span>
                     </button>
                     <button
                         onClick={() => setActiveTab(Tab.COACH)}
@@ -146,32 +187,42 @@ const App: React.FC = () => {
                             : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'
                         }`}
                     >
-                        <MessageSquare size={16} /> <span className="hidden sm:inline">Coach</span>
+                        <MessageSquare size={16} /> <span className="hidden md:inline">Coach</span>
                     </button>
                 </div>
+                
+                <button 
+                    onClick={handleResetApp}
+                    className="p-2 text-zinc-500 hover:text-red-400 transition-colors"
+                    title="Reset App Data"
+                >
+                    <Trash2 size={18} />
+                </button>
             </div>
         </header>
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {activeTab === Tab.WORKOUT && (
-                <>
+                <div className="animate-in fade-in duration-300">
                     {workoutStatus === 'loading' && <LoadingView message="Designing your optimal training split..." />}
                     {workoutStatus === 'error' && <ErrorView message="Failed to generate workout." onRetry={() => fetchWorkout(profile)} />}
                     {workoutStatus === 'success' && workoutPlan && <WorkoutPlanView plan={workoutPlan} />}
-                </>
+                </div>
             )}
             
             {activeTab === Tab.NUTRITION && (
-                <>
+                 <div className="animate-in fade-in duration-300">
                     {nutritionStatus === 'loading' && <LoadingView message="Calculating metabolic requirements & meal plan..." />}
                     {nutritionStatus === 'error' && <ErrorView message="Failed to generate nutrition plan." onRetry={() => fetchNutrition(profile)} />}
                     {nutritionStatus === 'success' && nutritionPlan && <NutritionPlanView plan={nutritionPlan} />}
-                </>
+                </div>
             )}
 
             {activeTab === Tab.PROGRESS && (
-                <ProgressView workoutPlan={workoutPlan} />
+                 <div className="animate-in fade-in duration-300">
+                    <ProgressView workoutPlan={workoutPlan} />
+                </div>
             )}
 
             {activeTab === Tab.COACH && profile && (

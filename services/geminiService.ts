@@ -16,6 +16,9 @@ export const generateWorkoutPlan = async (profile: UserProfile): Promise<Workout
 
     Return a valid JSON object with a summary and a daily schedule.
     Include a short description for each exercise explaining how to perform it.
+
+    IMPORTANT: Provide all text content (summary, day names, focus, exercise names, notes, descriptions) in Burmese language (Myanmar).
+    The JSON keys must remain in English.
   `;
 
   const response = await ai.models.generateContent({
@@ -27,25 +30,25 @@ export const generateWorkoutPlan = async (profile: UserProfile): Promise<Workout
       responseSchema: {
         type: Type.OBJECT,
         properties: {
-          summary: { type: Type.STRING, description: "A brief motivational overview of the plan." },
+          summary: { type: Type.STRING, description: "A brief motivational overview of the plan in Burmese." },
           schedule: {
             type: Type.ARRAY,
             items: {
               type: Type.OBJECT,
               properties: {
-                day: { type: Type.STRING, description: "Day of the week (e.g., Monday)" },
-                focus: { type: Type.STRING, description: "Main focus (e.g., Chest & Triceps, Rest)" },
+                day: { type: Type.STRING, description: "Day of the week in Burmese (e.g., တနင်္လာနေ့)" },
+                focus: { type: Type.STRING, description: "Main focus in Burmese" },
                 durationMinutes: { type: Type.NUMBER, description: "Estimated duration in minutes" },
                 exercises: {
                   type: Type.ARRAY,
                   items: {
                     type: Type.OBJECT,
                     properties: {
-                      name: { type: Type.STRING },
+                      name: { type: Type.STRING, description: "Exercise name in Burmese" },
                       sets: { type: Type.NUMBER },
-                      reps: { type: Type.STRING, description: "Rep range (e.g., '8-12' or 'Failure')" },
-                      notes: { type: Type.STRING, description: "Form cue or tempo instruction" },
-                      description: { type: Type.STRING, description: "Short step-by-step guide on how to perform the exercise." }
+                      reps: { type: Type.STRING, description: "Rep range (e.g., '8-12' or 'Failure') in Burmese" },
+                      notes: { type: Type.STRING, description: "Form cue or tempo instruction in Burmese" },
+                      description: { type: Type.STRING, description: "Short step-by-step guide on how to perform the exercise in Burmese." }
                     }
                   }
                 }
@@ -67,6 +70,9 @@ export const generateNutritionPlan = async (profile: UserProfile): Promise<Nutri
     Create a daily nutrition guide for a ${profile.age} year old, ${profile.weight}kg person with the goal of ${profile.goal}.
     Calculate appropriate caloric and macro targets.
     Provide a sample day of eating.
+
+    IMPORTANT: Provide all text content (advice, meal names, ingredients) in Burmese language (Myanmar).
+    The JSON keys must remain in English.
   `;
 
   const response = await ai.models.generateContent({
@@ -87,15 +93,15 @@ export const generateNutritionPlan = async (profile: UserProfile): Promise<Nutri
               fats: { type: Type.NUMBER }
             }
           },
-          advice: { type: Type.STRING, description: "General nutritional advice and hydration tips." },
+          advice: { type: Type.STRING, description: "General nutritional advice and hydration tips in Burmese." },
           sampleDay: {
             type: Type.OBJECT,
             properties: {
               breakfast: {
                 type: Type.OBJECT,
                 properties: {
-                  name: { type: Type.STRING },
-                  ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  name: { type: Type.STRING, description: "Meal name in Burmese" },
+                  ingredients: { type: Type.ARRAY, items: { type: Type.STRING, description: "Ingredient in Burmese" } },
                   calories: { type: Type.NUMBER },
                   protein: { type: Type.NUMBER }
                 }
@@ -103,8 +109,8 @@ export const generateNutritionPlan = async (profile: UserProfile): Promise<Nutri
               lunch: {
                 type: Type.OBJECT,
                 properties: {
-                  name: { type: Type.STRING },
-                  ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  name: { type: Type.STRING, description: "Meal name in Burmese" },
+                  ingredients: { type: Type.ARRAY, items: { type: Type.STRING, description: "Ingredient in Burmese" } },
                   calories: { type: Type.NUMBER },
                   protein: { type: Type.NUMBER }
                 }
@@ -112,8 +118,8 @@ export const generateNutritionPlan = async (profile: UserProfile): Promise<Nutri
               dinner: {
                 type: Type.OBJECT,
                 properties: {
-                  name: { type: Type.STRING },
-                  ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  name: { type: Type.STRING, description: "Meal name in Burmese" },
+                  ingredients: { type: Type.ARRAY, items: { type: Type.STRING, description: "Ingredient in Burmese" } },
                   calories: { type: Type.NUMBER },
                   protein: { type: Type.NUMBER }
                 }
@@ -121,8 +127,8 @@ export const generateNutritionPlan = async (profile: UserProfile): Promise<Nutri
               snack: {
                 type: Type.OBJECT,
                 properties: {
-                  name: { type: Type.STRING },
-                  ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  name: { type: Type.STRING, description: "Meal name in Burmese" },
+                  ingredients: { type: Type.ARRAY, items: { type: Type.STRING, description: "Ingredient in Burmese" } },
                   calories: { type: Type.NUMBER },
                   protein: { type: Type.NUMBER }
                 }
@@ -145,7 +151,9 @@ export const chatWithCoach = async (history: { role: string; parts: { text: stri
   ${workoutPlan ? `Current Workout Plan: ${JSON.stringify(workoutPlan.summary)}` : "Workout Plan: Currently being generated, tell the user to wait a moment if they ask for details."}
   ${nutritionPlan ? `Nutrition Targets: ${JSON.stringify(nutritionPlan.dailyTargets)}` : "Nutrition Plan: Currently being generated."}
   Keep answers concise, motivating, and science-based.
-  Use markdown for formatting.`;
+  Use markdown for formatting.
+  
+  IMPORTANT: Always respond in Burmese language (Myanmar).`;
 
   const chat = ai.chats.create({
     model: MODEL_NAME,
