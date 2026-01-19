@@ -1,14 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { UserProfile, ChatMessage } from '../types';
+import { UserProfile, ChatMessage, WorkoutPlan, NutritionPlan } from '../types';
 import { chatWithCoach } from '../services/geminiService';
 import { Send, Bot, User as UserIcon, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface Props {
   profile: UserProfile;
+  workoutPlan?: WorkoutPlan | null;
+  nutritionPlan?: NutritionPlan | null;
 }
 
-const ChatCoach: React.FC<Props> = ({ profile }) => {
+const ChatCoach: React.FC<Props> = ({ profile, workoutPlan, nutritionPlan }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'model',
@@ -43,7 +45,7 @@ const ChatCoach: React.FC<Props> = ({ profile }) => {
         parts: [{ text: m.text }]
       }));
 
-      const responseText = await chatWithCoach(history, input, profile);
+      const responseText = await chatWithCoach(history, input, profile, workoutPlan, nutritionPlan);
       
       const botMsg: ChatMessage = { role: 'model', text: responseText || "I'm having trouble thinking right now.", timestamp: new Date() };
       setMessages(prev => [...prev, botMsg]);
@@ -76,9 +78,8 @@ const ChatCoach: React.FC<Props> = ({ profile }) => {
                 msg.role === 'user' 
                   ? 'bg-zinc-800 text-white rounded-tr-none' 
                   : 'bg-emerald-900/20 border border-emerald-500/20 text-zinc-100 rounded-tl-none'
-              }`}>
+              } prose prose-invert prose-p:my-1 prose-ul:my-1 prose-li:my-0 max-w-none`}>
                 <ReactMarkdown 
-                    className="prose prose-invert prose-p:my-1 prose-ul:my-1 prose-li:my-0"
                     components={{
                         strong: ({node, ...props}) => <span className="text-emerald-400 font-bold" {...props} />
                     }}

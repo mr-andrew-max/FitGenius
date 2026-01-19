@@ -21,6 +21,7 @@ export const generateWorkoutPlan = async (profile: UserProfile): Promise<Workout
     model: MODEL_NAME,
     contents: prompt,
     config: {
+      thinkingConfig: { thinkingBudget: 0 }, // Disable thinking for faster latency
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -70,6 +71,7 @@ export const generateNutritionPlan = async (profile: UserProfile): Promise<Nutri
     model: MODEL_NAME,
     contents: prompt,
     config: {
+      thinkingConfig: { thinkingBudget: 0 }, // Disable thinking for faster latency
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -135,15 +137,20 @@ export const generateNutritionPlan = async (profile: UserProfile): Promise<Nutri
   return JSON.parse(text) as NutritionPlan;
 };
 
-export const chatWithCoach = async (history: { role: string; parts: { text: string }[] }[], newMessage: string, profile: UserProfile) => {
+export const chatWithCoach = async (history: { role: string; parts: { text: string }[] }[], newMessage: string, profile: UserProfile, workoutPlan?: WorkoutPlan | null, nutritionPlan?: NutritionPlan | null) => {
+  const systemInstruction = `You are an expert fitness coach named "Titan".
+  User Profile: ${JSON.stringify(profile)}.
+  ${workoutPlan ? `Current Workout Plan: ${JSON.stringify(workoutPlan.summary)}` : "Workout Plan: Currently being generated, tell the user to wait a moment if they ask for details."}
+  ${nutritionPlan ? `Nutrition Targets: ${JSON.stringify(nutritionPlan.dailyTargets)}` : "Nutrition Plan: Currently being generated."}
+  Keep answers concise, motivating, and science-based.
+  Use markdown for formatting.`;
+
   const chat = ai.chats.create({
     model: MODEL_NAME,
     history: history,
     config: {
-      systemInstruction: `You are an expert fitness coach named "Titan".
-      User Profile: ${JSON.stringify(profile)}.
-      Keep answers concise, motivating, and science-based.
-      Use markdown for formatting.`,
+      thinkingConfig: { thinkingBudget: 0 },
+      systemInstruction: systemInstruction,
     },
   });
 

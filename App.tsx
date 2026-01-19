@@ -13,76 +13,76 @@ enum Tab {
   COACH = 'coach'
 }
 
+type LoadStatus = 'idle' | 'loading' | 'success' | 'error';
+
+const LoadingView: React.FC<{ message: string }> = ({ message }) => (
+  <div className="flex flex-col items-center justify-center py-20 space-y-4 animate-in fade-in duration-500">
+    <div className="relative">
+      <div className="absolute inset-0 bg-emerald-500 blur-xl opacity-20 rounded-full animate-pulse"></div>
+      <Loader2 size={48} className="text-emerald-500 animate-spin relative z-10" />
+    </div>
+    <p className="text-zinc-400 text-sm">{message}</p>
+  </div>
+);
+
+const ErrorView: React.FC<{ message: string; onRetry: () => void }> = ({ message, onRetry }) => (
+  <div className="flex flex-col items-center justify-center py-20 space-y-4">
+    <div className="text-red-400 font-semibold">{message}</div>
+    <button 
+      onClick={onRetry}
+      className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors text-white text-sm"
+    >
+      <RefreshCw size={16} /> Retry
+    </button>
+  </div>
+);
+
 const App: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
-  const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
   
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
+  const [workoutStatus, setWorkoutStatus] = useState<LoadStatus>('idle');
+  
+  const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
+  const [nutritionStatus, setNutritionStatus] = useState<LoadStatus>('idle');
+
   const [activeTab, setActiveTab] = useState<Tab>(Tab.WORKOUT);
 
-  const handleOnboardingComplete = async (userProfile: UserProfile) => {
-    setProfile(userProfile);
-    setIsGenerating(true);
-    setError(null);
-
+  const fetchWorkout = async (userProfile: UserProfile) => {
+    setWorkoutStatus('loading');
     try {
-      // Parallel generation for speed
-      const [wPlan, nPlan] = await Promise.all([
-        generateWorkoutPlan(userProfile),
-        generateNutritionPlan(userProfile)
-      ]);
-      setWorkoutPlan(wPlan);
-      setNutritionPlan(nPlan);
+      const plan = await generateWorkoutPlan(userProfile);
+      setWorkoutPlan(plan);
+      setWorkoutStatus('success');
     } catch (err) {
       console.error(err);
-      setError("Failed to generate your plan. Please check your internet or API key and try again.");
-    } finally {
-      setIsGenerating(false);
+      setWorkoutStatus('error');
     }
   };
 
-  const retry = () => {
-    if (profile) handleOnboardingComplete(profile);
+  const fetchNutrition = async (userProfile: UserProfile) => {
+    setNutritionStatus('loading');
+    try {
+      const plan = await generateNutritionPlan(userProfile);
+      setNutritionPlan(plan);
+      setNutritionStatus('success');
+    } catch (err) {
+      console.error(err);
+      setNutritionStatus('error');
+    }
+  };
+
+  const handleOnboardingComplete = (userProfile: UserProfile) => {
+    setProfile(userProfile);
+    // Non-blocking trigger of data generation
+    fetchWorkout(userProfile);
+    fetchNutrition(userProfile);
   };
 
   if (!profile) {
     return (
       <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center p-4">
         <Onboarding onComplete={handleOnboardingComplete} />
-      </div>
-    );
-  }
-
-  if (isGenerating) {
-    return (
-      <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center space-y-6">
-        <div className="relative">
-          <div className="absolute inset-0 bg-emerald-500 blur-xl opacity-20 rounded-full animate-pulse"></div>
-          <Loader2 size={64} className="text-emerald-500 animate-spin relative z-10" />
-        </div>
-        <div className="text-center space-y-2">
-            <h2 className="text-2xl font-bold">Constructing your program...</h2>
-            <p className="text-zinc-400">Analyzing body metrics • Calculating macros • Designing splits</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center p-4">
-        <div className="max-w-md text-center space-y-4 bg-zinc-900 p-8 rounded-2xl border border-red-900/50">
-          <h2 className="text-xl font-bold text-red-400">Generation Error</h2>
-          <p className="text-zinc-400">{error}</p>
-          <button 
-            onClick={retry}
-            className="flex items-center justify-center gap-2 w-full py-3 bg-white text-black font-bold rounded-lg hover:bg-zinc-200 transition-colors"
-          >
-            <RefreshCw size={20} /> Try Again
-          </button>
-        </div>
       </div>
     );
   }
@@ -99,30 +99,34 @@ const App: React.FC = () => {
                     <span className="font-bold text-xl tracking-tight">FitGenius AI</span>
                 </div>
                 
-                <div className="flex gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800">
+                <div className="flex gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800 overflow-x-auto">
                     <button
                         onClick={() => setActiveTab(Tab.WORKOUT)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                             activeTab === Tab.WORKOUT 
                             ? 'bg-zinc-800 text-white shadow-sm' 
                             : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'
                         }`}
                     >
-                        <Dumbbell size={16} /> <span className="hidden sm:inline">Workout</span>
+                        <Dumbbell size={16} /> 
+                        <span className="hidden sm:inline">Workout</span>
+                        {workoutStatus === 'loading' && <Loader2 size={12} className="animate-spin text-emerald-500" />}
                     </button>
                     <button
                         onClick={() => setActiveTab(Tab.NUTRITION)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                             activeTab === Tab.NUTRITION
                             ? 'bg-zinc-800 text-white shadow-sm' 
                             : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'
                         }`}
                     >
-                        <Utensils size={16} /> <span className="hidden sm:inline">Nutrition</span>
+                        <Utensils size={16} /> 
+                        <span className="hidden sm:inline">Nutrition</span>
+                        {nutritionStatus === 'loading' && <Loader2 size={12} className="animate-spin text-emerald-500" />}
                     </button>
                     <button
                         onClick={() => setActiveTab(Tab.COACH)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                             activeTab === Tab.COACH 
                             ? 'bg-zinc-800 text-white shadow-sm' 
                             : 'text-zinc-400 hover:text-white hover:bg-zinc-800/50'
@@ -136,21 +140,38 @@ const App: React.FC = () => {
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {activeTab === Tab.WORKOUT && workoutPlan && (
-                <WorkoutPlanView plan={workoutPlan} />
+            {activeTab === Tab.WORKOUT && (
+                <>
+                    {workoutStatus === 'loading' && <LoadingView message="Designing your optimal training split..." />}
+                    {workoutStatus === 'error' && <ErrorView message="Failed to generate workout." onRetry={() => fetchWorkout(profile)} />}
+                    {workoutStatus === 'success' && workoutPlan && <WorkoutPlanView plan={workoutPlan} />}
+                </>
             )}
             
-            {activeTab === Tab.NUTRITION && nutritionPlan && (
-                <NutritionPlanView plan={nutritionPlan} />
+            {activeTab === Tab.NUTRITION && (
+                <>
+                    {nutritionStatus === 'loading' && <LoadingView message="Calculating metabolic requirements & meal plan..." />}
+                    {nutritionStatus === 'error' && <ErrorView message="Failed to generate nutrition plan." onRetry={() => fetchNutrition(profile)} />}
+                    {nutritionStatus === 'success' && nutritionPlan && <NutritionPlanView plan={nutritionPlan} />}
+                </>
             )}
 
             {activeTab === Tab.COACH && profile && (
-                <div className="max-w-4xl mx-auto">
+                <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="mb-6 text-center">
                         <h2 className="text-2xl font-bold mb-2">Titan AI Coach</h2>
                         <p className="text-zinc-400">Ask specific questions about your generated plan or form.</p>
+                        {(workoutStatus === 'loading' || nutritionStatus === 'loading') && (
+                            <p className="text-xs text-emerald-500 mt-2 animate-pulse">
+                                Analyzing your profile to generate custom plans...
+                            </p>
+                        )}
                     </div>
-                    <ChatCoach profile={profile} />
+                    <ChatCoach 
+                        profile={profile} 
+                        workoutPlan={workoutPlan} 
+                        nutritionPlan={nutritionPlan} 
+                    />
                 </div>
             )}
         </main>

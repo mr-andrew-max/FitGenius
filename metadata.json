@@ -1,5 +1,5 @@
 {
   "name": "FitGenius AI",
-  "description": "An intelligent personal trainer that generates custom workout plans, nutrition guides, and provides real-time coaching using Gemini 2.0 Flash.",
+  "description": "An intelligent personal trainer that generates custom workout plans, nutrition guides, and provides real-time coaching using Gemini 3.0 Flash.",
   "requestFramePermissions": []
 }
